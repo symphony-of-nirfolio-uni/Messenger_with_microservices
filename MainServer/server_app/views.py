@@ -30,7 +30,7 @@ def create_user(request):
     if request.method == "GET":
         email = request.GET.get('email', None)
         first_name = request.GET.get('first_name', None)
-        # print(lol)
+
     elif request.method == "POST":
         email = request.POST.get('email', None)
         first_name = request.POST.get('first_name', None)
