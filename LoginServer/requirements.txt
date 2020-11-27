@@ -2,3 +2,6 @@ Django>=3.0,<4.0
 psycopg2-binary>=2.8
 requests>=2.25
 djangorestframework>=3.12
+pyDES>=2.0
+PyJWT>=1.7
+python-jwt>=3.3
