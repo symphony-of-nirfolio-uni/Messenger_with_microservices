@@ -6,8 +6,12 @@ import server_app.views
 admin.autodiscover()
 
 urlpatterns = [
-    path('<int:user_id>/', server_app.views.get_id),
-    path('<int:user_id>/info/', server_app.views.user_info),
-    path('new', server_app.views.create_user),
-    path('hello/', server_app.views.hello),
+    path('new/', server_app.views.CreateUserView.as_view(), name='new'),
+    path('users/', server_app.views.AllUsersView.as_view(), name='all users'),
+    path('<username>/info/', server_app.views.UserInfoView.as_view(), name='info'),
+    path('<username>/update/', server_app.views.UserUpdateView.as_view(), name='update user'),
+    path('<username>/chats/', server_app.views.AllChatsView.as_view(), name='chat list'),
+    path('<username>/create-chat-with/<chum>/', server_app.views.CreateChatView.as_view(), name='chat creation'),
+    path('<username>/all-messages-with/<chum>/', server_app.views.AllMessagesView.as_view(), name='all messages'),
+    path('<username>/add-message-with/<chum>/', server_app.views.AddMessageView.as_view(), name='add message'),
 ]

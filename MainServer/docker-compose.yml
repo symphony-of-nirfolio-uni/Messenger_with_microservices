@@ -1,5 +1,5 @@
 version: "3.8"
-   
+
 services:
   main_db:
     image: "postgres:11"
@@ -10,6 +10,9 @@ services:
     ports:
       - "5410:5410"
     command: -p 5410
+    networks:
+      - internal-main-server
+
   main_server:
     build: .
     command: python manage.py runserver 0.0.0.0:8100
@@ -17,5 +20,19 @@ services:
       - .:/MainServer
     ports:
       - "8100:8100"
+    expose:
+      - "8100"
     depends_on:
       - main_db
+    networks:
+      external-nw:
+        ipv4_address: 172.18.0.2
+      internal-main-server:
+
+networks:
+  internal-main-server:
+    name: internal-main-server
+    internal: true
+
+  external-nw:
+    external: true

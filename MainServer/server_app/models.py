@@ -4,20 +4,18 @@ from django.db import models
 
 
 class UserInfo(models.Model):
-    user_id = models.IntegerField(unique=True, primary_key=True)
-    first_name = models.CharField(max_length=100)
-    last_name = models.CharField(max_length=100)
-    user_name = models.CharField(max_length=100, unique=True)
+    first_name = models.CharField(max_length=100, default='')
+    last_name = models.CharField(max_length=100, default='')
+    username = models.CharField(max_length=100, unique=True)
     email = models.CharField(max_length=50, unique=True)
-    status = models.CharField(max_length=500)
-    profile_pic = models.BinaryField()
+    status = models.CharField(max_length=500, default='')
 
     class Meta:
         db_table = "user_info"
 
 
 class ChatList(models.Model):
-    chat_id = models.IntegerField(unique=True, primary_key=True)
+    chat_id = models.AutoField(unique=True, primary_key=True)
     first_user = models.ForeignKey('UserInfo', related_name='first_user', on_delete=models.CASCADE)
     second_user = models.ForeignKey('UserInfo', related_name='second_user', on_delete=models.CASCADE)
 
@@ -26,7 +24,7 @@ class ChatList(models.Model):
 
 
 class Message(models.Model):
-    message_id = models.IntegerField(unique=True, primary_key=True)
+    message_id = models.AutoField(unique=True, primary_key=True)
     chat = models.ForeignKey('ChatList', on_delete=models.CASCADE)
     message = models.CharField(max_length=10000)
     time = models.DateTimeField()
