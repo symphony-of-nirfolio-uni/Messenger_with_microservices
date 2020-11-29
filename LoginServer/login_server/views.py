@@ -13,6 +13,7 @@ import jwt
 import pyDes
 import base64
 import json
+import random
 
 from credentials import ADMIN_CLIENT, SERVER_CLIENT
 
@@ -32,6 +33,7 @@ def create_access_token(response, data, qs):
         username = qs.admin_name
 
     encode_data = {
+        str(random.random()): random.random(),
         "access_token": access_token,
         "username": username,
         "refresh_token": refresh_token
