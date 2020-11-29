@@ -102,7 +102,7 @@ class CreateUserView(APIView):
             )
 
             new_user.save()
-            return Response(status=200)
+            return Response(status=201)
 
         else:
             return Response({'error': 'token not valid'}, status=401)
@@ -182,7 +182,7 @@ class CreateChatView(APIView):
                 new_chat = ChatList(first_user=qs1[0],
                                     second_user=qs2[0])
                 new_chat.save()
-                return Response(status=200)
+                return Response(status=201)
 
         else:
             return Response({'error': 'token not valid'}, status=401)
@@ -259,7 +259,7 @@ class AddMessageView(APIView):
                     owner=user,
                 )
                 new_message.save()
-                return Response(status=200)
+                return Response(status=201)
 
         else:
             return Response({'error': 'token not valid'}, status=401)
