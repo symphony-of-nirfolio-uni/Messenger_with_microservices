@@ -41,7 +41,7 @@ def verify(token, username, usertype):
     response = requests.post('http://' + login_server_ip + '/verify_token/',
                              data=data)
     try:
-        return 'verified' in response.json() and response.json()['verified'] and usertype == 'admin'
+        return 'verified' in response.json() and response.json()['verified']
     except:
         return False
 
@@ -59,6 +59,8 @@ class BanView(APIView):
             return Response({'error': 'wrong input data'}, status=400)
 
         if verify(request.headers['Token'], request.headers['Username'], request.headers['UserType']):
+            if request.headers['UserType'] != 'admin':
+                return Response({'error': 'users not allowed here'}, status=405)
             if user_exists(username, request.headers['Username'], request.headers['Token'], request.headers['UserType']):
                 qs = BannedUsers.objects.filter(username=username)
                 if len(qs) == 0:
@@ -120,6 +122,8 @@ class TimeoutView(APIView):
             return Response({'error': 'wrong input data'}, status=400)
 
         if verify(request.headers['Token'], request.headers['Username'], request.headers['UserType']):
+            if request.headers['UserType'] != 'admin':
+                return Response({'error': 'users not allowed here'}, status=405)
             if user_exists(username, request.headers['Username'], request.headers['Token'], request.headers['UserType']):
                 qs = TimeoutUsers.objects.filter(username=username)
                 if len(qs) == 0:
