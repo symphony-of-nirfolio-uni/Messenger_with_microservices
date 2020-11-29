@@ -82,6 +82,8 @@ class CreateUserView(APIView):
         if email is None or username is None:
             return Response({'error': 'wrong input data'})
         if verify(request.headers['Token'], request.headers['Username'], request.headers['UserType']):
+            if request.headers['UserType'] == 'admin':
+                return Response({'error': 'admins not allowed'}, status=405)
             if request.headers['Username'] != username:
                 return Response({'error': 'wrong input'}, 400)
 
