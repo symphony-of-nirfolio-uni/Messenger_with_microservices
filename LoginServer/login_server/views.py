@@ -97,10 +97,10 @@ class GetTokenView(APIView):
                 if len(qs) != 0:
                     return Response(create_access_token(response.json(), data, qs[0]), status=201)
             elif data['client_id'] == "AdminClient":
-                qs = Users.objects.filter(username=username)
-                if qs.approved is False:
-                    return Response({'error': 'admin isn\'t approved'}, status=403)
+                qs = Admins.objects.filter(admin_name=username)
                 if len(qs) != 0:
+                    if qs[0].approved is False:
+                        return Response({'error': 'admin isn\'t approved'}, status=403)
                     return Response(create_access_token(response.json(), data, qs[0]), status=201)
 
             return Response({'error': 'user doesn\'t exist'})
