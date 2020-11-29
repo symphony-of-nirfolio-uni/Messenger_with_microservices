@@ -13,6 +13,7 @@ import jwt
 import pyDes
 import base64
 import json
+import random
 
 from credentials import ADMIN_CLIENT, SERVER_CLIENT
 
@@ -32,6 +33,7 @@ def create_access_token(response, data, qs):
         username = qs.admin_name
 
     encode_data = {
+        str(random.random()): random.random(),
         "access_token": access_token,
         "username": username,
         "refresh_token": refresh_token
@@ -92,7 +94,7 @@ class GetTokenView(APIView):
         if 'access_token' in response.json() and 'refresh_token' in response.json():
             if data['client_id'] == "ServerClient":
                 qs = Users.objects.filter(username=username)
-                if len(qs) == 0:
+                if len(qs) != 0:
                     return Response(create_access_token(response.json(), data, qs[0]), status=201)
             elif data['client_id'] == "AdminClient":
                 qs = Users.objects.filter(username=username)
@@ -101,9 +103,7 @@ class GetTokenView(APIView):
                 if len(qs) != 0:
                     return Response(create_access_token(response.json(), data, qs[0]), status=201)
 
-            else:
-                return Response({'error': 'user doesn\'t exist'})
-            return Response(create_access_token(response.json(), data, qs[0]), status=201)
+            return Response({'error': 'user doesn\'t exist'})
 
         return Response(status=500)
 
@@ -188,10 +188,14 @@ class VerifyTokenView(APIView):
 
             hash_pass = qs[0].password_hash
 
-        key = pyDes.des(hash_pass[:8], pyDes.CBC, "\0\0\0\0\0\0\0\0", pad=None, padmode=pyDes.PAD_PKCS5)
-        token_bytes = base64.urlsafe_b64decode(token)
-        data = key.decrypt(token_bytes)
-        data = json.loads(data)
+        try:
+            key = pyDes.des(hash_pass[:8], pyDes.CBC, "\0\0\0\0\0\0\0\0", pad=None, padmode=pyDes.PAD_PKCS5)
+            token_bytes = base64.urlsafe_b64decode(token)
+            data = key.decrypt(token_bytes)
+            data = json.loads(data)
+        except:
+            return Response({'error': 'token not valid'}, status=401)
+
         if username != data['username']:
             return Response({'error': 'token not valid'}, status=401)
 
@@ -209,9 +213,7 @@ class RefreshTokenView(APIView):
         username = request.POST.get('username', None)
         user_type = request.POST.get('user_type', None)
         if username is None or token is None or (user_type != 'user' and user_type != 'admin'):
-            return Response({"token": token,
-                             "username": username,
-                             "user_type": user_type}, status=400)
+            return Response(wrong_input, status=400)
 
         if user_type == 'user':
             user_type = 'ServerClient'
@@ -229,10 +231,14 @@ class RefreshTokenView(APIView):
 
             hash_pass = qs[0].password_hash
 
-        key = pyDes.des(hash_pass[:8], pyDes.CBC, "\0\0\0\0\0\0\0\0", pad=None, padmode=pyDes.PAD_PKCS5)
-        token_bytes = base64.urlsafe_b64decode(token)
-        data = key.decrypt(token_bytes)
-        data = json.loads(data)
+        try:
+            key = pyDes.des(hash_pass[:8], pyDes.CBC, "\0\0\0\0\0\0\0\0", pad=None, padmode=pyDes.PAD_PKCS5)
+            token_bytes = base64.urlsafe_b64decode(token)
+            data = key.decrypt(token_bytes)
+            data = json.loads(data)
+        except:
+            return Response({'error': 'token not valid'}, status=401)
+
         if username != data['username'] or 'refresh_token' not in data:
             return Response({'error': 'token not valid'}, status=401)
 
@@ -259,4 +265,7 @@ class RefreshTokenView(APIView):
             if 'access_token' in response.json() and 'refresh_token' in response.json():
                 return Response(create_access_token(response.json(), data, qs[0]), status=201)
 
-            return Response({'error':'unknown issue'}, status=500)
+            return Response({'error': 'unknown issue'}, status=500)
+
+
+
