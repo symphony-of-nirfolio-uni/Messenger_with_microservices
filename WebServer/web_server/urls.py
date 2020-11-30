@@ -6,5 +6,6 @@ import web_server.views
 admin.autodiscover()
 
 urlpatterns = [
-    path('login/', web_server.views.Login.as_view(), name='new')
+    path('login/', web_server.views.Login.as_view(), name='login'),
+    path('sign_up/', web_server.views.SignUpView.as_view(), name='sign up')
 ]
