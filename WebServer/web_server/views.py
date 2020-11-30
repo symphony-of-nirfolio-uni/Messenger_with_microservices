@@ -29,6 +29,33 @@ def verify(username, token, usertype):
         return False
 
 
+def refresh(username, token, usertype):
+    data = {
+        'username': username,
+        'token': token,
+        'user_type': usertype
+    }
+
+    response = requests.post('http://' + login_server_ip + '/refresh_token/',
+                             data=data)
+    try:
+        return response.json()
+    except:
+        return {'error': 'unknown error'}
+
+
+def is_banned(header):
+    response = requests.get('http://' + admin_server_ip + '/' + header['Username'] + '/is-banned/',
+                            headers=header)
+    try:
+        if response.json()['is_banned'] == "true":
+            return 1
+        else:
+            return 0
+    except:
+        return -1
+
+
 class Login(APIView):
     permission_classes = (AllowAny,)
 
@@ -38,7 +65,7 @@ class Login(APIView):
                 if request.COOKIES['UserType'] == 'admin':
                     return redirect('/profile/admin/' + request.COOKIES['Username'])
                 else:
-                    return redirect('/profile/user/' + request.COOKIES['Username'])
+                    return redirect('/profile/user/' + request.COOKIES['Username'] + '/')
 
         return render(request, template_name='login.html', context={'login_result': True})
 
@@ -86,7 +113,7 @@ class SignUpView(APIView):
                 if request.COOKIES['UserType'] == 'admin':
                     return redirect('/profile/admin/' + request.COOKIES['Username'])
                 else:
-                    return redirect('/profile/user/' + request.COOKIES['Username'])
+                    return redirect('/profile/user/' + request.COOKIES['Username'] + '/' + '/')
 
         return render(request, template_name='sign_up.html')
 
@@ -124,11 +151,97 @@ class SignUpView(APIView):
                 return render(request, template_name='sign_up.html', context={'sign_up_result': False})
             return render(request, template_name='sign_up.html', context={'sign_up_result': False})
 
+        if token_type == 'user':
+            data = {
+                'username': username,
+                'token_type': token_type,
+                'password': password
+            }
+            token_response = requests.post('http://' + login_server_ip + '/get_token/',
+                                           data=data)
+
+            header = {
+                'Token': token_response.json()['ans_token'],
+                'Username': username,
+                'UserType': token_type
+            }
+        else:
+            header = {}
+
         data = {
             'username': username,
             'email': email,
         }
+
         token_response = requests.post('http://' + main_server_ip + '/new/',
-                                       data=data)
+                                       data=data,
+                                       headers=header)
 
         return render(request, template_name='login.html', context={'sign_up_result': False})
+
+
+class UserProfileView(APIView):
+    permission_classes = (AllowAny,)
+
+    def get(self, request, username):
+        if not ('Username' in request.COOKIES and 'Token' in request.COOKIES and 'UserType' in request.COOKIES) or\
+                request.COOKIES['UserType'] == 'admin':
+            return redirect('/login/')
+
+        if not verify(request.COOKIES['Username'], request.COOKIES['Token'], request.COOKIES['UserType']):
+            new_token = refresh(request.COOKIES['Username'], request.COOKIES['Token'], request.COOKIES['UserType'])
+            if 'ans_token' not in new_token:
+                return redirect('/login/')
+
+        header = {
+            'Username': request.COOKIES['Username'],
+            'Token': request.COOKIES['Token'],
+            'UserType': request.COOKIES['UserType']
+        }
+
+        banned = is_banned(header)
+        if banned == 1:
+            return render(request, template_name='banned.html')
+        elif banned == -1:
+            return render(request, template_name='error.html', context={'error': 'admin service is closed'})
+
+        try:
+            token_response = requests.get('http://' + main_server_ip + '/' + username + '/info/',
+                                          headers=header)
+            context = {
+                'username': token_response.json()['username'],
+                'email': token_response.json()['email'],
+                'first_name': token_response.json()['first_name'],
+                'last_name': token_response.json()['last_name'],
+                'status': token_response.json()['status'],
+                'you_are': header['Username']
+            }
+            token_response = requests.get('http://' + main_server_ip + '/' + context['you_are'] + '/chats/',
+                                          headers=header)
+            if context['you_are'] == context['username']:
+                context['chums'] = token_response.json()['chums']
+            else:
+                chums = token_response.json()['chums']
+                for chum in chums:
+                    if chum == context['username']:
+                        context['can_talk'] = True
+                if 'can_talk' not in context:
+                    context['can_talk'] = False
+            return render(request, template_name='profile_user.html', context=context)
+        except:
+            return render(request, template_name='error.html', context={'error': token_response.content})
+
+
+class Logout(APIView):
+    permission_classes = (AllowAny,)
+
+    def get(self, request):
+        response = redirect('/login/')
+        if 'Username' in request.COOKIES:
+            response.delete_cookie('Username')
+        if 'Token' in request.COOKIES:
+            response.delete_cookie('Token')
+        if 'UserType' in request.COOKIES:
+            response.delete_cookie('UserType')
+
+        return response

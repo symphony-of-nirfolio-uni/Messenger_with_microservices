@@ -7,5 +7,7 @@ admin.autodiscover()
 
 urlpatterns = [
     path('login/', web_server.views.Login.as_view(), name='login'),
-    path('sign_up/', web_server.views.SignUpView.as_view(), name='sign up')
+    path('logout/', web_server.views.Logout.as_view(), name='logout'),
+    path('sign_up/', web_server.views.SignUpView.as_view(), name='sign up'),
+    path('profile/user/<username>/', web_server.views.UserProfileView.as_view(), name='user profile view')
 ]
