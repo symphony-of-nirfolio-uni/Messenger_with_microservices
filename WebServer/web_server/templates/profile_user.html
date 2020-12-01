@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Profile</title>
+</head>
+<body>
+{% block content %}
+{% if not you_are is None %}
+    <h3>You are: {{you_are}}</h3>
+{% endif %}
+    {% if not you_are is None and not username is None and username != you_are %}
+        <h3>Watching: {{username}}</h3>
+    {% endif %}
+<p>
+    {% if not email is None %}
+        Email: {{email}}<br />
+    {% endif %}
+    {% if not first_name is None %}
+        First name: {{first_name}}<br />
+    {% endif %}
+    {% if not last_name is None %}
+        Last name: {{last_name}}<br />
+    {% endif %}
+    {% if not status is None %}
+        Status: {{status}}
+    {% endif %}
+</p>
+{% if not chums is None%}
+    {% if chums|length == 0 %}
+        <h5>You have no chums</h5>
+    {% else %}
+        <p><b>Your chums</b><br />
+        <ul>
+            {% for chum in chums %}
+            <li><a href="/{{you_are}}/chat-with/{{chum}}/">{{chum}}</a></li>
+            {% endfor %}
+        </ul>
+        </p>
+    {% endif %}
+{% else %}
+    {% if can_talk %}
+    <p>He is your chum! Write smth to <b><a href="/{{you_are}}/chat-with/{{username}}/">him</a></b></p>
+    {% else %}
+        <p>You don't have chat with <b>{{username}}</b><br />
+            <b>click <a href="/{{you_are}}/chat-with/{{username}}/">here</a></b> to create
+        </p>
+    {% endif %}
+{% endif %}
+<a href="/user_list/">User list</a><br />
+<a href="/logout/">Logout</a>
+{% endblock %}
+</body>
+</html>

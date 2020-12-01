@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin page</title>
+</head>
+<body>
+{% block content %}
+{% if not you_are is None %}
+    <h3>You are: {{you_are}}</h3>
+{% endif %}
+{% if not users is None%}
+    {% if users|length == 0 %}
+        <h5>No users here</h5>
+    {% else %}
+        <table title="Users list" border="1px solid black" style="border-collapse: collapse; align=center" width="300">
+            {% for user in users %}
+            <tr>
+                <td>{{user}}</td>
+                <td><a href="/ban/{{user}}/">ban</a></td>
+                <td><a href="/timeout/{{user}}/">timeout</a></td>
+            </tr>
+            {% endfor %}
+        </table>
+        </p>
+    {% endif %}
+{% else %}
+    <h5>No users here</h5>
+{% endif %}
+<a href="/logout/">Logout</a>
+{% endblock %}
+</body>
+</html>

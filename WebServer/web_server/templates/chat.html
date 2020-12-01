@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Chat</title>
+</head>
+<ul>
+    {% for owner, message, time in chat %}
+    <li><b>{{owner}}:</b><br />
+        {{message}}<br />
+        {{time}}
+    </li>
+    {% endfor %}
+    <br />
+    <form method="post" action="/{{username}}/chat-with/{{chum}}/">
+        <label for="fmessage"><b><i>Your message:</i></b></label><br />
+        <input type="text" id="fmessage" name="message"><br />
+        <input type="submit" value="Send">
+    </form>
+</ul>
+<a href="/profile/user/{{username}}/"/><b>Your Profile</b></a><br />
+<a href="/user_list/">User list</a><br />
+<a href="/logout/">Logout</a>
+</body>
+</html>
