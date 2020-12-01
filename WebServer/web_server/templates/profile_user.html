@@ -33,17 +33,17 @@
         <p><b>Your chums</b><br />
         <ul>
             {% for chum in chums %}
-            <li><a href="/{{you_are}}/chat-with/{{chum}}">{{chum}}</a></li>
+            <li><a href="/{{you_are}}/chat-with/{{chum}}/">{{chum}}</a></li>
             {% endfor %}
         </ul>
         </p>
     {% endif %}
 {% else %}
     {% if can_talk %}
-    <p>He is your chum! Write smth to <b><a href="/{{you_are}}/chat-with/{{username}}">him</a></b></p>
+    <p>He is your chum! Write smth to <b><a href="/{{you_are}}/chat-with/{{username}}/">him</a></b></p>
     {% else %}
         <p>You don't have chat with <b>{{username}}</b><br />
-            <b>click <a href="/{{you_are}}/chat-with/{{username}}">here</a></b> to create
+            <b>click <a href="/{{you_are}}/chat-with/{{username}}/">here</a></b> to create
         </p>
     {% endif %}
 {% endif %}

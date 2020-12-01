@@ -13,4 +13,5 @@ urlpatterns = [
     path('profile/admin/', web_server.views.AdminProfileView.as_view(), name='admin page'),
     path('ban/<username>/', web_server.views.BanUserView.as_view(), name='ban user'),
     path('timeout/<username>/', web_server.views.TimeoutUserView.as_view(), name='ban user'),
+    path('<username>/chat-with/<chum>/', web_server.views.ChatView.as_view(), name='chat'),
 ]

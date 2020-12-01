@@ -424,6 +424,89 @@ class TimeoutUserView(APIView):
             return render(request, template_name='error.html', context={'error': token_response.content})
 
 
+class ChatView(APIView):
+    permission_classes = (AllowAny,)
+
+    def get(self, request, username, chum):
+        if not ('Username' in request.COOKIES and 'Token' in request.COOKIES and 'UserType' in request.COOKIES) or \
+                request.COOKIES['UserType'] == 'admin':
+            return redirect('/login/')
+
+        new_token = request.COOKIES['Token']
+        if not verify(request.COOKIES['Username'], request.COOKIES['Token'], request.COOKIES['UserType']):
+            new_token = refresh(request.COOKIES['Username'], request.COOKIES['Token'], request.COOKIES['UserType'])
+            if 'ans_token' not in new_token:
+                return redirect('/login/')
+            new_token = new_token['ans_token']
+
+        header = {
+            'Username': request.COOKIES['Username'],
+            'Token': new_token,
+            'UserType': request.COOKIES['UserType']
+        }
+        if username != header['Username']:
+            response = redirect('profile/user/' + header['Username'] + '/')
+            response.set_cookie('Token', new_token)
+            return response
+        try:
+            token_response = requests.get('http://' + main_server_ip + '/' + username +
+                                          '/all-messages-with/' + chum + '/',
+                                          headers=header)
+            chat = token_response.json()['messages']
+            chat_list = []
+            for mes in chat:
+                chat_list.append([mes['owner'], mes['message'], mes['time']])
+
+            context = {
+                'username': username,
+                'chum': chum,
+                'chat': chat_list,
+            }
+
+            response = render(request, template_name='chat.html', context=context)
+            response.set_cookie('Token', new_token)
+            return response
+        except:
+            return render(request, template_name='error.html', context={'error': token_response.content})
+
+    def post(self, request, username, chum):
+        if not ('Username' in request.COOKIES and 'Token' in request.COOKIES and 'UserType' in request.COOKIES) or \
+                request.COOKIES['UserType'] == 'admin':
+            return redirect('/login/')
+
+        new_token = request.COOKIES['Token']
+        if not verify(request.COOKIES['Username'], request.COOKIES['Token'], request.COOKIES['UserType']):
+            new_token = refresh(request.COOKIES['Username'], request.COOKIES['Token'], request.COOKIES['UserType'])
+            if 'ans_token' not in new_token:
+                return redirect('/login/')
+            new_token = new_token['ans_token']
+
+        header = {
+            'Username': request.COOKIES['Username'],
+            'Token': new_token,
+            'UserType': request.COOKIES['UserType']
+        }
+        if username != header['Username']:
+            response = redirect('profile/user/' + header['Username'] + '/')
+            response.set_cookie('Token', new_token)
+            return response
+        try:
+            data = {'message': request.POST.get('message')}
+            token_response = requests.post('http://' + main_server_ip + '/' + username +
+                                           '/add-message-with/' + chum + '/',
+                                           headers=header,
+                                           data=data)
+
+            #if token_response.status_code != 200:
+            #   return render(request, template_name='error.html', context={'error': token_response.content})
+
+            response = redirect('/' + username + '/chat-with/' + chum + '/')
+            response.set_cookie('Token', new_token)
+            return response
+        except:
+            return render(request, template_name='error.html', context={'error': token_response.content})
+
+
 class Logout(APIView):
     permission_classes = (AllowAny,)
 
