@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>User list</title>
+</head>
+<body>
+{% block content %}
+{% if not you_are is None %}
+    <h3>You are: {{you_are}}</h3>
+{% endif %}
+{% if not users is None%}
+    {% if users|length == 0 %}
+        <h4>No users</h4>
+    {% else %}
+        <p><b>Users</b><br />
+        <ul>
+            {% for users in users %}
+                <li><a href="/{{you_are}}/chat-with/{{users}}/">{{users}}</a></li>
+            {% endfor %}
+        </ul>
+        </p>
+    {% endif %}
+{% else %}
+    <h4>No users here</h4>
+{% endif %}
+<a href="/profile/user/{{you_are}}/"><b>Your Profile</b></a><br />
+<a href="/logout/">Logout</a>
+{% endblock %}
+</body>
+</html>

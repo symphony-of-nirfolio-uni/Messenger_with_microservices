@@ -4,21 +4,36 @@
     <meta charset="UTF-8">
     <title>Chat</title>
 </head>
+    {% if not username is None %}
+        <h3 style="color:blue">You are: {{username}}</h3>
+    {% endif %}
+    {% if chat|length == 0%}
+        <h4>No messages here</h4>
+    {% endif %}
 <ul>
     {% for owner, message, time in chat %}
-    <li><b>{{owner}}:</b><br />
+    <li>
+        {% if owner == username %}
+            <b style="color:blue">{{owner}}:</b><br />
+        {% else %}
+            <b>{{owner}}:</b><br />
+        {% endif %}
         {{message}}<br />
-        {{time}}
+        <i style="font-size:9pt">{{time}}</i>
     </li>
+    <br />
     {% endfor %}
     <br />
+    {% if timeout is not None %}
+    <h4 style="color:orange">You are in timeout till <span style="font-size:13px"><i>{{timeout}}</i></span></h4>
+    {% endif %}
     <form method="post" action="/{{username}}/chat-with/{{chum}}/">
         <label for="fmessage"><b><i>Your message:</i></b></label><br />
         <input type="text" id="fmessage" name="message"><br />
         <input type="submit" value="Send">
     </form>
 </ul>
-<a href="/profile/user/{{username}}/"/><b>Your Profile</b></a><br />
+<a href="/profile/user/{{username}}/"><b>Your Profile</b></a><br />
 <a href="/user_list/">User list</a><br />
 <a href="/logout/">Logout</a>
 </body>
