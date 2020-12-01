@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Timeout user</title>
+</head>
+<body>
+
+{% block content %}
+{% if not username is None %}
+    <h3>{{username}}</h3>
+{% endif %}
+{% if not timeout is None %}
+    <h3>{{timeout}}</h3>
+{% else %}
+    <form method="post" action="/timeout/{{username}}/">
+        <label for="fduration">Duration:</label><br />
+        <input type="number" id="fduration" name="duration"><br />
+        <input type="submit" value="Timeout"><br />
+    </form>
+{% endif %}
+
+<a href="/profile/admin/">Return to main</a><br />
+<a href="/logout/">Logout</a>
+{% endblock %}
+</body>
+</html>
