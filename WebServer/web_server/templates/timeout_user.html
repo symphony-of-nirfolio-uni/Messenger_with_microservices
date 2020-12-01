@@ -11,7 +11,7 @@
     <h3>{{username}}</h3>
 {% endif %}
 {% if not timeout is None %}
-    <h3>{{timeout}}</h3>
+    <h3><i>{{timeout}}</i></h3>
 {% else %}
     <form method="post" action="/timeout/{{username}}/">
         <label for="fduration">Duration:</label><br />

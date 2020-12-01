@@ -56,6 +56,18 @@ def is_banned(header):
         return -1, None
 
 
+def is_timeout(header):
+    response = requests.get('http://' + admin_server_ip + '/' + header['Username'] + '/is-timeout/',
+                            headers=header)
+    try:
+        if response.json()['is_timeout'] == "true":
+            return 1, response.json()['end_time']
+        else:
+            return 0, None
+    except:
+        return -1, None
+
+
 class Login(APIView):
     permission_classes = (AllowAny,)
 
@@ -197,15 +209,19 @@ class UserProfileView(APIView):
 
         header = {
             'Username': request.COOKIES['Username'],
-            'Token': request.COOKIES['Token'],
+            'Token': new_token,
             'UserType': request.COOKIES['UserType']
         }
 
         banned, end_time = is_banned(header)
         if banned == 1:
-            return render(request, template_name='banned.html', context={'end_time': end_time})
+            response = render(request, template_name='banned.html', context={'end_time': end_time})
+            response.set_cookie('Token', new_token)
+            return response
         elif banned == -1:
-            return render(request, template_name='error.html', context={'error': 'admin service is closed'})
+            response = render(request, template_name='error.html', context={'error': 'admin service is closed'})
+            response.set_cookie('Token', new_token)
+            return response
 
         try:
             token_response = requests.get('http://' + main_server_ip + '/' + username + '/info/',
@@ -444,14 +460,40 @@ class ChatView(APIView):
             'Token': new_token,
             'UserType': request.COOKIES['UserType']
         }
+
+        banned, end_time = is_banned(header)
+        if banned == 1:
+            response = render(request, template_name='banned.html', context={'end_time': end_time})
+            response.set_cookie('Token', new_token)
+            return response
+        elif banned == -1:
+            response = render(request, template_name='error.html', context={'error': 'admin service is closed'})
+            response.set_cookie('Token', new_token)
+            return response
+
         if username != header['Username']:
             response = redirect('profile/user/' + header['Username'] + '/')
             response.set_cookie('Token', new_token)
             return response
         try:
+            timeout, end_time = is_timeout(header)
+            if timeout == 1:
+                timeout = end_time
+            elif timeout == -1:
+                response = render(request, template_name='error.html', context={'error': 'admin service is closed'})
+                response.set_cookie('Token', new_token)
+                return response
+            else:
+                timeout = None
+
+            token_response = requests.post('http://' + main_server_ip + '/' + username +
+                                           '/create-chat-with/' + chum + '/',
+                                           headers=header)
+
             token_response = requests.get('http://' + main_server_ip + '/' + username +
                                           '/all-messages-with/' + chum + '/',
                                           headers=header)
+
             chat = token_response.json()['messages']
             chat_list = []
             for mes in chat:
@@ -461,6 +503,7 @@ class ChatView(APIView):
                 'username': username,
                 'chum': chum,
                 'chat': chat_list,
+                'timeout': timeout
             }
 
             response = render(request, template_name='chat.html', context=context)
@@ -486,11 +529,36 @@ class ChatView(APIView):
             'Token': new_token,
             'UserType': request.COOKIES['UserType']
         }
+
+        banned, end_time = is_banned(header)
+        if banned == 1:
+            response = render(request, template_name='banned.html', context={'end_time': end_time})
+            response.set_cookie('Token', new_token)
+            return response
+        elif banned == -1:
+            response = render(request, template_name='error.html', context={'error': 'admin service is closed'})
+            response.set_cookie('Token', new_token)
+            return response
+
         if username != header['Username']:
             response = redirect('profile/user/' + header['Username'] + '/')
             response.set_cookie('Token', new_token)
             return response
         try:
+            timeout, end_time = is_timeout(header)
+            if timeout == 1:
+                response = redirect('/' + username + '/chat-with/' + chum + '/')
+                response.set_cookie('Token', new_token)
+                return response
+            elif timeout == -1:
+                response = render(request, template_name='error.html', context={'error': 'admin service is closed'})
+                response.set_cookie('Token', new_token)
+                return response
+
+            token_response = requests.get('http://' + main_server_ip + '/' + username +
+                                          '/create-chat-with/' + chum + '/',
+                                          headers=header)
+
             data = {'message': request.POST.get('message')}
             token_response = requests.post('http://' + main_server_ip + '/' + username +
                                            '/add-message-with/' + chum + '/',
@@ -501,6 +569,55 @@ class ChatView(APIView):
             #   return render(request, template_name='error.html', context={'error': token_response.content})
 
             response = redirect('/' + username + '/chat-with/' + chum + '/')
+            response.set_cookie('Token', new_token)
+            return response
+        except:
+            return render(request, template_name='error.html', context={'error': token_response.content})
+
+
+class UserListView(APIView):
+    permission_classes = (AllowAny,)
+
+    def get(self, request):
+        if not ('Username' in request.COOKIES and 'Token' in request.COOKIES and 'UserType' in request.COOKIES) or \
+                request.COOKIES['UserType'] == 'admin':
+            return redirect('/login/')
+
+        new_token = request.COOKIES['Token']
+        if not verify(request.COOKIES['Username'], request.COOKIES['Token'], request.COOKIES['UserType']):
+            new_token = refresh(request.COOKIES['Username'], request.COOKIES['Token'], request.COOKIES['UserType'])
+            if 'ans_token' not in new_token:
+                return redirect('/login/')
+            new_token = new_token['ans_token']
+
+        header = {
+            'Username': request.COOKIES['Username'],
+            'Token': new_token,
+            'UserType': request.COOKIES['UserType']
+        }
+
+        banned, end_time = is_banned(header)
+        if banned == 1:
+            response = render(request, template_name='banned.html', context={'end_time': end_time})
+            response.set_cookie('Token', new_token)
+            return response
+        elif banned == -1:
+            response = render(request, template_name='error.html', context={'error': 'admin service is closed'})
+            response.set_cookie('Token', new_token)
+            return response
+
+        try:
+            token_response = requests.get('http://' + main_server_ip + '/users/',
+                                          headers=header)
+            users = token_response.json()['usernames']
+
+            context = {
+                'you_are': header['Username'],
+                'users': users
+            }
+
+            response = render(request, template_name='user_list.html', context=context)
+
             response.set_cookie('Token', new_token)
             return response
         except:
