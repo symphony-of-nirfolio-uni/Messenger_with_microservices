@@ -214,7 +214,9 @@ class AllChatsView(APIView):
                 chums.append(chum.second_user.username)
 
             for chum in qs2:
-                chums.append(chum.first_user.username)
+                if chum != username:
+                    chums.append(chum.first_user.username)
+
             return Response({'chums': chums})
         else:
             return Response({'error': 'token not valid'}, status=401)
