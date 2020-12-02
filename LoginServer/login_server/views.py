@@ -49,7 +49,6 @@ def create_access_token(response, data, qs):
 
     ans = {
         "token": token,
-        "aed": encode_data
     }
 
     return ans
