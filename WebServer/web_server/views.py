@@ -223,9 +223,18 @@ class UserProfileView(APIView):
             response.set_cookie('Token', new_token)
             return response
 
-        try:
-            token_response = requests.get('http://' + main_server_ip + '/' + username + '/info/',
-                                          headers=header)
+        token_response = requests.get('http://' + main_server_ip + '/' + username + '/info/',
+                                      headers=header)
+        if 'error' in token_response.json():
+            if username == header['Username']:
+                return redirect('/logout/')
+            else:
+                context = {
+                    'username': username,
+                    'existance': False,
+                    'you_are': header['Username']
+                }
+        else:
             context = {
                 'username': token_response.json()['username'],
                 'email': token_response.json()['email'],
@@ -234,19 +243,126 @@ class UserProfileView(APIView):
                 'status': token_response.json()['status'],
                 'you_are': header['Username']
             }
-            token_response = requests.get('http://' + main_server_ip + '/' + context['you_are'] + '/chats/',
-                                          headers=header)
-            if context['you_are'] == context['username']:
-                context['chums'] = token_response.json()['chums']
-            else:
-                chums = token_response.json()['chums']
-                for chum in chums:
-                    if chum == context['username']:
-                        context['can_talk'] = True
-                if 'can_talk' not in context:
-                    context['can_talk'] = False
+        token_response = requests.get('http://' + main_server_ip + '/' + context['you_are'] + '/chats/',
+                                      headers=header)
+        if context['you_are'] == context['username']:
+            context['chums'] = token_response.json()['chums']
+        else:
+            chums = token_response.json()['chums']
+            for chum in chums:
+                if chum == context['username']:
+                    context['can_talk'] = True
+            if 'can_talk' not in context:
+                context['can_talk'] = False
 
-            response = render(request, template_name='profile_user.html', context=context)
+        response = render(request, template_name='profile_user.html', context=context)
+        response.set_cookie('Token', new_token)
+        return response
+        return render(request, template_name='error.html', context={'error': token_response.content})
+
+
+class UpdateProfileView(APIView):
+    permission_classes = (AllowAny,)
+
+    def get(self, request, username):
+        if not ('Username' in request.COOKIES and 'Token' in request.COOKIES and 'UserType' in request.COOKIES) or\
+                request.COOKIES['UserType'] == 'admin':
+            return redirect('/login/')
+
+        new_token = request.COOKIES['Token']
+        if not verify(request.COOKIES['Username'], request.COOKIES['Token'], request.COOKIES['UserType']):
+            new_token = refresh(request.COOKIES['Username'], request.COOKIES['Token'], request.COOKIES['UserType'])
+            if 'ans_token' not in new_token:
+                return redirect('/login/')
+            new_token = new_token['ans_token']
+
+        header = {
+            'Username': request.COOKIES['Username'],
+            'Token': new_token,
+            'UserType': request.COOKIES['UserType']
+        }
+
+        banned, end_time = is_banned(header)
+        if banned == 1:
+            response = render(request, template_name='banned.html', context={'end_time': end_time})
+            response.set_cookie('Token', new_token)
+            return response
+        elif banned == -1:
+            response = render(request, template_name='error.html', context={'error': 'admin service is closed'})
+            response.set_cookie('Token', new_token)
+            return response
+        if username != header['Username']:
+            response = redirect('/profile/user/' + username + '/')
+            response.set_cookie('Token', new_token)
+            return response
+
+        try:
+            token_response = requests.get('http://' + main_server_ip + '/' + username + '/info/',
+                                          headers=header)
+            context = {
+                'first_name': token_response.json()['first_name'],
+                'last_name': token_response.json()['last_name'],
+                'status': token_response.json()['status'],
+                'you_are': header['Username']
+            }
+
+            response = render(request, template_name='update_user.html', context=context)
+            response.set_cookie('Token', new_token)
+            return response
+        except:
+            return render(request, template_name='error.html', context={'error': token_response.content})
+
+    def post(self, request, username):
+        if not ('Username' in request.COOKIES and 'Token' in request.COOKIES and 'UserType' in request.COOKIES) or \
+                request.COOKIES['UserType'] == 'admin':
+            return redirect('/login/')
+
+        new_token = request.COOKIES['Token']
+        if not verify(request.COOKIES['Username'], request.COOKIES['Token'], request.COOKIES['UserType']):
+            new_token = refresh(request.COOKIES['Username'], request.COOKIES['Token'], request.COOKIES['UserType'])
+            if 'ans_token' not in new_token:
+                return redirect('/login/')
+            new_token = new_token['ans_token']
+
+        header = {
+            'Username': request.COOKIES['Username'],
+            'Token': new_token,
+            'UserType': request.COOKIES['UserType']
+        }
+
+        banned, end_time = is_banned(header)
+        if banned == 1:
+            response = render(request, template_name='banned.html', context={'end_time': end_time})
+            response.set_cookie('Token', new_token)
+            return response
+        elif banned == -1:
+            response = render(request, template_name='error.html', context={'error': 'admin service is closed'})
+            response.set_cookie('Token', new_token)
+            return response
+
+        if username != header['Username']:
+            response = redirect('/profile/user/' + username + '/')
+            response.set_cookie('Token', new_token)
+            return response
+
+        try:
+            data = {
+                'first_name': request.POST.get('first_name'),
+                'last_name': request.POST.get('last_name'),
+                'status': request.POST.get('status'),
+            }
+            token_response = requests.post('http://' + main_server_ip + '/' + username + '/update/',
+                                           headers=header,
+                                           data=data)
+
+            context = data
+            context['you_are'] = header['Username']
+            if token_response.status_code != 200:
+                context['update_status'] = 1
+            else:
+                context['update_status'] = -1
+
+            response = render(request, template_name='update_user.html', context=context)
             response.set_cookie('Token', new_token)
             return response
         except:

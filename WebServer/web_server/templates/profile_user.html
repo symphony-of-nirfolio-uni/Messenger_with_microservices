@@ -3,49 +3,90 @@
 <head>
     <meta charset="UTF-8">
     <title>Profile</title>
+    <style>
+        a:link, a:visited, a:active {
+          color: blue;
+          background-color: transparent;
+          text-decoration: none;
+        }
+
+        a:hover {
+          color: blue;
+          background-color: transparent;
+          font-weight: bold;
+          text-decoration: underline;
+        }
+    </style>
 </head>
 <body>
 {% block content %}
 {% if not you_are is None %}
-    <h3>You are: {{you_are}}</h3>
+    <h3>You are: <i>{{you_are}}</i></h3>
 {% endif %}
     {% if not you_are is None and not username is None and username != you_are %}
         <h3>Watching: {{username}}</h3>
     {% endif %}
+{%if existance is None %}
 <p>
+    <table border="0px">
     {% if not email is None %}
-        Email: {{email}}<br />
+        <tr>
+            <td>Email:</td>
+            <td><i>{{email}}</i></td>
+        </tr>
     {% endif %}
     {% if not first_name is None %}
-        First name: {{first_name}}<br />
+        <tr>
+            <td>First name:</td>
+            <td><i>{{first_name}}</i></td>
+        </tr>
     {% endif %}
     {% if not last_name is None %}
-        Last name: {{last_name}}<br />
+        <tr>
+            <td>Last name:</td>
+            <td><i>{{last_name}}</i></td>
+        </tr>
     {% endif %}
     {% if not status is None %}
-        Status: {{status}}
+        <tr>
+            <td>Status:</td>
+            <td><i>{{status}}</i></td>
+        </tr>
+    {% endif %}
+    </table>
+    <br >
+    {% if you_are == username %}
+        <a href="/profile/update/{{username}}/">Update profile</a><br />
     {% endif %}
 </p>
-{% if not chums is None%}
-    {% if chums|length == 0 %}
-        <h5>You have no chums</h5>
-    {% else %}
-        <p><b>Your chums</b><br />
-        <ul>
-            {% for chum in chums %}
-            <li><a href="/{{you_are}}/chat-with/{{chum}}/">{{chum}}</a></li>
-            {% endfor %}
-        </ul>
-        </p>
-    {% endif %}
+{% endif %}
+{%if existance == False %}
+    <span style="color:red"><b>User doesn't exist</b></span><br /><br />
 {% else %}
-    {% if can_talk %}
-    <p>He is your chum! Write smth to <b><a href="/{{you_are}}/chat-with/{{username}}/">him</a></b></p>
+    {% if not chums is None%}
+        {% if chums|length == 0 %}
+            <h5>You have no chums</h5>
+        {% else %}
+            <p><b>Your chums</b><br />
+            <ul>
+                {% for chum in chums %}
+                    <li><a href="/{{you_are}}/chat-with/{{chum}}/"><i>{{chum}}</i></a></li>
+                {% endfor %}
+            </ul>
+            </p>
+        {% endif %}
     {% else %}
-        <p>You don't have chat with <b>{{username}}</b><br />
-            <b>click <a href="/{{you_are}}/chat-with/{{username}}/">here</a></b> to create
-        </p>
+        {% if can_talk %}
+        <p>He is your chum! Write smth to <b><a href="/{{you_are}}/chat-with/{{username}}/">him</a></b></p>
+        {% else %}
+            <p>You don't have chat with <b>{{username}}</b><br />
+                <b>click <a href="/{{you_are}}/chat-with/{{username}}/">here</a></b> to create
+            </p>
+        {% endif %}
     {% endif %}
+{% endif %}
+{% if username != you_are %}
+<a href="/profile/user/{{you_are}}">Your Profile</a><br />
 {% endif %}
 <a href="/user_list/">User list</a><br />
 <a href="/logout/">Logout</a>

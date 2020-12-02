@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Update</title>
+    <style>
+        a:link, a:visited, a:active {
+          color: blue;
+          background-color: transparent;
+          text-decoration: none;
+        }
+
+        a:hover {
+          color: blue;
+          background-color: transparent;
+          font-weight: bold;
+          text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+{% block content %}
+{% if not you_are is None %}
+<h3>You are: <i>{{you_are}}</i></h3>
+{% endif %}
+
+<form method="post" action="/profile/update/{{you_are}}/">
+    {% if update_status == 1 %}
+        <p style="color:red"> Update failed try again. </p>
+    {% endif %}{% if update_status == -1 %}
+        <p style="color:green"> Updated! </p>
+    {% endif %}
+    <label for="ffirst_name">First name:</label><br />
+    <input type="text" id="ffirst_name" name="first_name" value="{{first_name}}"><br />
+
+    <label for="flast_name">Last name:</label><br />
+    <input type="text" id="flast_name" name="last_name" value="{{last_name}}"><br />
+
+    <label for="fstatus">Status:</label><br />
+    <input type="text" id="fstatus" name="status" value="{{status}}"><br />
+
+    <input type="submit" value="Change"><br />
+    <br />
+</form>
+{% endblock %}
+<a href="/profile/user/{{you_are}}/">Your Profile</a><br />
+<a href="/user_list/">User list</a><br />
+<a href="/logout/">Logout</a>
+</body>
+</html>
