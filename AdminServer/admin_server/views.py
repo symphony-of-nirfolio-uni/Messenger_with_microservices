@@ -10,14 +10,15 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
 from admin_server.models import BannedUsers, TimeoutUsers
 from django.utils.timezone import localtime, now
-from datetime import timedelta
+from datetime import timedelta, datetime
+from credentials import PUBLIC_KEY_KEYCLOAK, SECRET_JWT_KEY
+import jwt
 
 login_server_ip = '172.18.0.3:8200'
 main_server_ip = '172.18.0.2:8100'
 
 
 def user_exists(username, admin_name, token, usertype):
-
     header = {
         'Username': admin_name,
         'Token': token,
@@ -31,19 +32,35 @@ def user_exists(username, admin_name, token, usertype):
         return False
 
 
-def verify(token, username, usertype):
-    data = {
-        'username': username,
-        'token': token,
-        'user_type': usertype
-    }
-
-    response = requests.post('http://' + login_server_ip + '/verify_token/',
-                             data=data)
+def verify_token(data, user_type):
+    public_key = PUBLIC_KEY_KEYCLOAK
+    if user_type == 'user':
+        user_type = "ServerClient"
+    elif user_type == 'admin':
+        user_type = "AdminClient"
+    else:
+        user_type = ""
     try:
-        return 'verified' in response.json() and response.json()['verified']
+        access_token_json = jwt.decode(data['access_token'], public_key, algorithms='RS256',
+                                       audience=[user_type, 'account'])
+        return access_token_json['clientId'] == user_type
     except:
         return False
+
+
+def verify(token, username, usertype):
+    data = jwt.decode(token, SECRET_JWT_KEY, algorithm='HS256')
+
+    data['time'] = datetime.strptime(data['time'][:-6], '%Y-%m-%d %H:%M:%S.%f')
+    current_time = datetime.strptime(str(localtime(now()))[:-6], '%Y-%m-%d %H:%M:%S.%f')
+
+    if username != data['username'] or (current_time - data['time']) > timedelta(seconds=data['duration_refresh']):
+        return False
+
+    if (current_time - data['time']) < timedelta(seconds=data['duration_access']) \
+            and verify_token(data, usertype):
+        return True
+    return False
 
 
 class BanView(APIView):
@@ -95,13 +112,13 @@ class IsBannedView(APIView):
             if user_exists(username, request.headers['Username'], request.headers['Token'], request.headers['UserType']):
                 qs = BannedUsers.objects.filter(username=username)
                 if len(qs) == 0:
-                    return Response({'is_banned': 'false'}, status=200)
+                    return Response({'is_banned': False}, status=200)
                 else:
                     end_time = qs[0].start_time + timedelta(seconds=qs[0].duration)
                     if end_time < localtime(now()):
-                        return Response({'is_banned': 'false'}, status=200)
+                        return Response({'is_banned': False}, status=200)
                     else:
-                        return Response({'is_banned': 'true',
+                        return Response({'is_banned': True,
                                          'end_time': end_time}, status=200)
             else:
                 return Response({'error': 'user doesn\'t exist'}, status=406)
@@ -158,13 +175,13 @@ class IsTimeoutView(APIView):
             if user_exists(username, request.headers['Username'], request.headers['Token'], request.headers['UserType']):
                 qs = TimeoutUsers.objects.filter(username=username)
                 if len(qs) == 0:
-                    return Response({'is_timeout': 'false'}, status=200)
+                    return Response({'is_timeout': False}, status=200)
                 else:
                     end_time = qs[0].start_time + timedelta(seconds=qs[0].duration)
                     if end_time < localtime(now()):
-                        return Response({'is_timeout': 'false'}, status=200)
+                        return Response({'is_timeout': False}, status=200)
                     else:
-                        return Response({'is_timeout': 'true',
+                        return Response({'is_timeout': True,
                                          'end_time': end_time}, status=200)
             else:
                 return Response({'error': 'user doesn\'t exist'}, status=406)
