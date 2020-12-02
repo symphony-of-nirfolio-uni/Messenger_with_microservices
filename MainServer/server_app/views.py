@@ -214,7 +214,7 @@ class AllChatsView(APIView):
                 chums.append(chum.second_user.username)
 
             for chum in qs2:
-                if chum != username:
+                if chum.first_user.username != username:
                     chums.append(chum.first_user.username)
 
             return Response({'chums': chums})
