@@ -144,11 +144,6 @@ class CreateUserView(APIView):
                              email=email,
                              password_hash=pass_hash)
             new_user.save()
-            return Response({
-                'username': username,
-                'email': email,
-                'password_hash': pass_hash
-            })
 
         else:
             qs = Admins.objects.filter(admin_name=username)
