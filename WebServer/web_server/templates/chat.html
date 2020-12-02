@@ -3,20 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <title>Chat</title>
+    <style>
+        a:link, a:visited, a:active {
+          color: blue;
+          background-color: transparent;
+          text-decoration: none;
+        }
+
+        a:hover {
+          color: blue;
+          background-color: transparent;
+          font-weight: bold;
+          text-decoration: underline;
+        }
+    </style>
 </head>
     {% if not username is None %}
-        <h3 style="color:blue">You are: {{username}}</h3>
+        <h3 style="color:blue">You are: <i>{{username}}</i></h3>
     {% endif %}
+    {% if not chum is None %}
+        <h3 style="margin-top:-15px">Chat with: <i>{{chum}}</i></h3>
+    {% endif %}
+<ul>
     {% if chat|length == 0%}
         <h4>No messages here</h4>
     {% endif %}
-<ul>
     {% for owner, message, time in chat %}
     <li>
         {% if owner == username %}
-            <b style="color:blue">{{owner}}:</b><br />
+            <b style="color:blue"><i>{{owner}}:</i></b><br />
         {% else %}
-            <b>{{owner}}:</b><br />
+            <b><i>{{owner}}:</i></b><br />
         {% endif %}
         {{message}}<br />
         <i style="font-size:9pt">{{time}}</i>
@@ -33,7 +50,8 @@
         <input type="submit" value="Send">
     </form>
 </ul>
-<a href="/profile/user/{{username}}/"><b>Your Profile</b></a><br />
+<br />
+<a href="/profile/user/{{username}}/">Your Profile</a><br />
 <a href="/user_list/">User list</a><br />
 <a href="/logout/">Logout</a>
 </body>
