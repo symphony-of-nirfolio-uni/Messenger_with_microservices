@@ -14,6 +14,9 @@ import pyDes
 import base64
 import json
 import random
+from django.utils.timezone import localtime, now
+from datetime import timedelta, datetime
+from credentials import SECRET_JWT_KEY
 
 from credentials import ADMIN_CLIENT, SERVER_CLIENT
 
@@ -32,19 +35,21 @@ def create_access_token(response, data, qs):
     else:
         username = qs.admin_name
 
+    s = str(localtime(now()))
     encode_data = {
-        str(random.random()): random.random(),
+        "time": s,
+        "duration_access": 1000,
+        "duration_refresh": 2000,
         "access_token": access_token,
         "username": username,
-        "refresh_token": refresh_token
+        "refresh_token": refresh_token,
     }
-    key = pyDes.des(qs.password_hash[:8], pyDes.CBC, "\0\0\0\0\0\0\0\0", pad=None, padmode=pyDes.PAD_PKCS5)
-    s = json.dumps(encode_data)
-    encrypted = key.encrypt(s)
-    my_s = base64.urlsafe_b64encode(encrypted)
+
+    token = jwt.encode(encode_data, SECRET_JWT_KEY, algorithm='HS256')
 
     ans = {
-        "ans_token": my_s
+        "token": token,
+        "aed": encode_data
     }
 
     return ans
@@ -140,6 +145,11 @@ class CreateUserView(APIView):
                              email=email,
                              password_hash=pass_hash)
             new_user.save()
+            return Response({
+                'username': username,
+                'email': email,
+                'password_hash': pass_hash
+            })
 
         else:
             qs = Admins.objects.filter(admin_name=username)
@@ -160,49 +170,6 @@ class CreateUserView(APIView):
             new_user.save()
 
         return Response(status=201,)
-
-
-class VerifyTokenView(APIView):
-    permission_classes = (AllowAny,)
-
-    def post(self, request):
-        token = request.POST.get('token', None)
-        username = request.POST.get('username', None)
-        user_type = request.POST.get('user_type', None)
-        if username is None or token is None or (user_type != 'user' and user_type != 'admin'):
-            return Response(wrong_input, status=400)
-
-        if user_type == 'user':
-            user_type = 'ServerClient'
-            qs = Users.objects.filter(username=username)
-            if len(qs) == 0:
-                return Response({'error': 'user doesn\'t exist'}, status=406)
-            hash_pass = qs[0].password_hash
-        else:
-            user_type = 'AdminClient'
-            qs = Admins.objects.filter(admin_name=username)
-            if len(qs) == 0:
-                return Response({'error': 'admin doesn\'t exist'}, status=406)
-            if qs[0].approved is False:
-                return Response({'error': 'admin doesn\'t approved'}, status=406)
-
-            hash_pass = qs[0].password_hash
-
-        try:
-            key = pyDes.des(hash_pass[:8], pyDes.CBC, "\0\0\0\0\0\0\0\0", pad=None, padmode=pyDes.PAD_PKCS5)
-            token_bytes = base64.urlsafe_b64decode(token)
-            data = key.decrypt(token_bytes)
-            data = json.loads(data)
-        except:
-            return Response({'error': 'token not valid'}, status=401)
-
-        if username != data['username']:
-            return Response({'error': 'token not valid'}, status=401)
-
-        if verify_token(data, user_type):
-            return Response({'verified': 'True'}, status=201)
-        else:
-            return Response({'error': 'token not valid'}, status=401)
 
 
 class RefreshTokenView(APIView):
@@ -231,19 +198,17 @@ class RefreshTokenView(APIView):
 
             hash_pass = qs[0].password_hash
 
-        try:
-            key = pyDes.des(hash_pass[:8], pyDes.CBC, "\0\0\0\0\0\0\0\0", pad=None, padmode=pyDes.PAD_PKCS5)
-            token_bytes = base64.urlsafe_b64decode(token)
-            data = key.decrypt(token_bytes)
-            data = json.loads(data)
-        except:
+        data = jwt.decode(token, SECRET_JWT_KEY, algorithm='HS256')
+
+        data['time'] = datetime.strptime(data['time'][:-6], '%Y-%m-%d %H:%M:%S.%f')
+        current_time = datetime.strptime(str(localtime(now()))[:-6], '%Y-%m-%d %H:%M:%S.%f')
+
+        if username != data['username'] or (current_time-data['time']) > timedelta(seconds=data['duration_refresh']):
             return Response({'error': 'token not valid'}, status=401)
 
-        if username != data['username'] or 'refresh_token' not in data:
-            return Response({'error': 'token not valid'}, status=401)
-
-        if verify_token(data, user_type):
-            return Response({'verified': 'True'}, status=201)
+        if (current_time-data['time']) < timedelta(seconds=data['duration_access']) \
+                and verify_token(data, user_type):
+            return Response({'verified': True}, status=201)
         else:
             if user_type == "AdminClient":
                 data = {
