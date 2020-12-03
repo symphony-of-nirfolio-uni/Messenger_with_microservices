@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Sign up</title>
+    <style>
+        a:link, a:visited, a:active {
+          color: blue;
+          background-color: transparent;
+          text-decoration: none;
+        }
+
+        a:hover {
+          color: blue;
+          background-color: transparent;
+          font-weight: bold;
+          text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <form method="post" action="/sign_up/">
+        {% block content %}
+        {% if not sign_up_result is None and not sign_up_result %}
+            <p style="color:red"> Sign up failed. Please try again. </p>
+        {% endif %}
+
+        {% if not username_result is None and not username_result %}
+            <p style="color:red"> Username is used. Please try again. </p>
+        {% endif %}
+        <label for="fusername">Username:</label><br />
+        <input type="text" id="fusername" name="username" required><br />
+
+        {% if not email_result is None and not email_result %}
+            <p style="color:red"> Email is used. Please try again. </p>
+        {% endif %}
+        <label for="femail">Email:</label><br />
+        <input type="email" id="femail" name="email" required><br />
+
+        <label for="fpassword">Password:</label><br />
+        <input type="password" id="fpassword" name="password" required><br />
+
+        {% if not password_result is None and not password_result %}
+            <p style="color:red"> Repeat password not equal. Please try again. </p>
+        {% endif %}
+        {% endblock %}
+        <label for="frepeat_password">Repeat password:</label><br />
+        <input type="password" id="frepeat_password" name="repeat_password" required><br />
+
+        <label for="token_type">Choose your type:</label><br />
+        <select id="token_type" name="token_type">
+            <option value="user" selected>User</option>
+            <option value="admin">Admin</option>
+        </select>
+        <input type="submit" value="Sign up"><br />
+        <br />
+        <a href="/login/">Return to login</a>
+    </form>
+</body>
+</html>

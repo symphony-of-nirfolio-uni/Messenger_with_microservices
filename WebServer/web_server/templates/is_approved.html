@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Approved</title>
+</head>
+<body>
+    <style>
+        a:link, a:visited, a:active {
+          color: blue;
+          background-color: transparent;
+          text-decoration: none;
+        }
+
+        a:hover {
+          color: blue;
+          background-color: transparent;
+          font-weight: bold;
+          text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+{% block content %}
+{% if approved %}
+    <h3 style="color:green">Approved admin: <i>{{admin}}</i></h3>
+{% else %}
+    <h3 style="color:red">Not approved admin <i>{{admin}}</i> due to unknown error. Try later.</h3>
+{% endif %}
+
+<a href="/profile/admin/not_approved/">Return to not approved admins</a><br />
+<a href="/logout/">Logout</a>
+{% endblock %}
+</body>
+</html>

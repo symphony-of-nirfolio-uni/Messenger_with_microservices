@@ -1,0 +1,38 @@
+version: "3.8"
+
+services:
+  admin_db:
+    image: "postgres:11"
+    environment:
+      - POSTGRES_DB=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    ports:
+      - "5420:5420"
+    command: -p 5420
+    networks:
+      - internal-admin-server
+
+  admin_server:
+    build: .
+    command: python manage.py runserver 0.0.0.0:8400
+    volumes:
+      - .:/AdminServer
+    ports:
+      - "8400:8400"
+    expose:
+      - "8400"
+    depends_on:
+      - admin_db
+    networks:
+      external-nw:
+        ipv4_address: 172.18.0.5
+      internal-admin-server:
+
+networks:
+  internal-admin-server:
+    name: internal-admin-server
+    internal: true
+
+  external-nw:
+    external: true

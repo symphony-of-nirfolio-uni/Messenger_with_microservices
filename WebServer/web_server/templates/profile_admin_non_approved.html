@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Not approved</title>
+    <style>
+        a:link, a:visited, a:active {
+          color: blue;
+          background-color: transparent;
+          text-decoration: none;
+        }
+
+        a:hover {
+          color: blue;
+          background-color: transparent;
+          font-weight: bold;
+          text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+{% block content %}
+{% if not you_are is None %}
+    <h3>You are: <i>{{you_are}}</i></h3>
+{% endif %}
+{% if not admins is None%}
+    {% if admins|length == 0 %}
+        <h4>No unapproved admins here</h4>
+    {% else %}
+        <h4 style="margin-top:-15px; margin-bottom:8px">List of unapproved admins:</h4>
+        <table border="1px solid black" style="border-collapse: collapse; align=center" width="300">
+            {% for admin in admins %}
+            <tr>
+                <td><i>{{admin}}</i></td>
+                <td><a href="/profile/admin/approve/{{admin}}/">approve</a></td>
+            </tr>
+            {% endfor %}
+        </table>
+        </p>
+    {% endif %}
+{% else %}
+    <h4>No unapproved admins here</h4>
+{% endif %}
+<a href="/profile/admin/users/">Users list</a><br />
+<a href="/logout/">Logout</a>
+{% endblock %}
+</body>
+</html>

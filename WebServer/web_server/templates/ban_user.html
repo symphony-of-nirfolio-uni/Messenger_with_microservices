@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Ban</title>
+    <style>
+        a:link, a:visited, a:active {
+          color: blue;
+          background-color: transparent;
+          text-decoration: none;
+        }
+
+        a:hover {
+          color: blue;
+          background-color: transparent;
+          font-weight: bold;
+          text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+{% block content %}
+{% if not username is None %}
+    <h3><i>{{username}}</i></h3>
+{% endif %}
+{% if not banned is None %}
+    <h3>{{banned}}</h3>
+{% else %}
+    <form method="post" action="/ban/{{username}}/">
+        <label for="fduration">Duration:</label><br />
+        <input type="number" id="fduration" name="duration"><br />
+        <input type="submit" value="Ban"><br />
+    </form>
+{% endif %}
+
+<a href="/profile/admin/users/">Return to users list</a><br />
+<a href="/logout/">Logout</a>
+{% endblock %}
+</body>
+</html>

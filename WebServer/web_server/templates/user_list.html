@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>User list</title>
+    <style>
+        a:link, a:visited, a:active {
+          color: blue;
+          background-color: transparent;
+          text-decoration: none;
+        }
+
+        a:hover {
+          color: blue;
+          background-color: transparent;
+          font-weight: bold;
+          text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+{% block content %}
+{% if not you_are is None %}
+<h3>You are: <i>{{you_are}}</i></h3>
+{% endif %}
+{% if not users is None%}
+    {% if users|length == 0 %}
+        <h4>No users</h4>
+    {% else %}
+        <ul>
+            <b>Users</b>
+            {% for users in users %}
+            <li><a href="/{{you_are}}/chat-with/{{users}}/"><i>{{users}}</i></a></li>
+            {% endfor %}
+        </ul>
+        </p>
+    {% endif %}
+{% else %}
+    <h4>No users here</h4>
+{% endif %}
+<a href="/profile/user/{{you_are}}/">Your Profile</a><br />
+<a href="/logout/">Logout</a>
+{% endblock %}
+</body>
+</html>

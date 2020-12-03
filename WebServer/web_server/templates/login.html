@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Login page</title>
+    <style>
+        a:link, a:visited, a:active {
+          color: blue;
+          background-color: transparent;
+          text-decoration: none;
+        }
+
+        a:hover {
+          color: blue;
+          background-color: transparent;
+          font-weight: bold;
+          text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <form method="post" action="/login/">
+        {% block content %}
+        {% if not login_result is None and not login_result %}
+            <p style="color:red"> Login Failed. Please try again. </p>
+        {% endif %}
+        {% if not sign_up_result is None and not sign_up_result %}
+            <p style="color:green"> Sign up is done. You can login. </p>
+        {% endif %}
+        {% endblock %}
+        <label for="fusername">Username:</label><br />
+        <input type="text" id="fusername" name="username" required><br />
+
+        <label for="fpassword">Password:</label><br />
+        <input type="password" id="fpassword" name="password" required><br />
+
+        <label for="token_type">Choose your type:</label><br />
+        <select id="token_type" name="token_type">
+            <option value="user" selected>User</option>
+            <option value="admin">Admin</option>
+        </select>
+        <input type="submit" value="Login"><br />
+        <a href="/sign_up/">Sign up</a>
+    </form>
+</body>
+</html>
