@@ -97,7 +97,7 @@ class Login(APIView):
         if 'Username' in request.COOKIES and 'Token' in request.COOKIES and 'UserType' in request.COOKIES:
             if verify(request.COOKIES['Username'], request.COOKIES['Token'], request.COOKIES['UserType']):
                 if request.COOKIES['UserType'] == 'admin':
-                    return redirect('/profile/admin/')
+                    return redirect('/profile/admin/users/')
                 else:
                     return redirect('/profile/user/' + request.COOKIES['Username'] + '/')
 
@@ -245,42 +245,44 @@ class UserProfileView(APIView):
             response.set_cookie('Token', new_token)
             return response
 
-        token_response = requests.get('http://' + main_server_ip + '/' + username + '/info/',
-                                      headers=header)
-        if 'error' in token_response.json():
-            if username == header['Username']:
-                return redirect('/logout/')
+        try:
+            token_response = requests.get('http://' + main_server_ip + '/' + username + '/info/',
+                                          headers=header)
+            if 'error' in token_response.json():
+                if username == header['Username']:
+                    return redirect('/logout/')
+                else:
+                    context = {
+                        'username': username,
+                        'existance': False,
+                        'you_are': header['Username']
+                    }
             else:
                 context = {
-                    'username': username,
-                    'existance': False,
+                    'username': token_response.json()['username'],
+                    'email': token_response.json()['email'],
+                    'first_name': token_response.json()['first_name'],
+                    'last_name': token_response.json()['last_name'],
+                    'status': token_response.json()['status'],
                     'you_are': header['Username']
                 }
-        else:
-            context = {
-                'username': token_response.json()['username'],
-                'email': token_response.json()['email'],
-                'first_name': token_response.json()['first_name'],
-                'last_name': token_response.json()['last_name'],
-                'status': token_response.json()['status'],
-                'you_are': header['Username']
-            }
-        token_response = requests.get('http://' + main_server_ip + '/' + context['you_are'] + '/chats/',
-                                      headers=header)
-        if context['you_are'] == context['username']:
-            context['chums'] = token_response.json()['chums']
-        else:
-            chums = token_response.json()['chums']
-            for chum in chums:
-                if chum == context['username']:
-                    context['can_talk'] = True
-            if 'can_talk' not in context:
-                context['can_talk'] = False
+            token_response = requests.get('http://' + main_server_ip + '/' + context['you_are'] + '/chats/',
+                                          headers=header)
+            if context['you_are'] == context['username']:
+                context['chums'] = token_response.json()['chums']
+            else:
+                chums = token_response.json()['chums']
+                for chum in chums:
+                    if chum == context['username']:
+                        context['can_talk'] = True
+                if 'can_talk' not in context:
+                    context['can_talk'] = False
 
-        response = render(request, template_name='profile_user.html', context=context)
-        response.set_cookie('Token', new_token)
-        return response
-        return render(request, template_name='error.html', context={'error': token_response.content})
+            response = render(request, template_name='profile_user.html', context=context)
+            response.set_cookie('Token', new_token)
+            return response
+        except:
+            return render(request, template_name='error.html', context={'error': token_response.content})
 
 
 class UpdateProfileView(APIView):
