@@ -220,7 +220,6 @@ class RefreshTokenView(APIView):
             response = requests.post('http://' + keycloak_ip + '/auth/realms/messenger/protocol/openid-connect/token',
                                      data=data, headers=headers)
 
-            # return Response(data)
             if 'access_token' in response.json() and 'refresh_token' in response.json():
                 return Response(create_access_token(response.json(), data, qs[0]), status=201)
 
