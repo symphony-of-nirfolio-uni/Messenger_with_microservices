@@ -7,26 +7,48 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
 from django.utils.timezone import localtime, now
-
+from django.utils.timezone import localtime, now
+from datetime import timedelta, datetime
+from credentials import PUBLIC_KEY_KEYCLOAK, SECRET_JWT_KEY
+import jwt
 
 main_server_ip = '172.18.0.2:8100'
 login_server_ip = '172.18.0.3:8200'
 admin_server_ip = '172.18.0.5:8400'
 
 
-def verify(username, token, usertype):
-    data = {
-        'username': username,
-        'token': token,
-        'user_type': usertype
-    }
-
-    response = requests.post('http://' + login_server_ip + '/verify_token/',
-                             data=data)
+def verify_token(data, user_type):
+    public_key = PUBLIC_KEY_KEYCLOAK
+    if user_type == 'user':
+        user_type = "ServerClient"
+    elif user_type == 'admin':
+        user_type = "AdminClient"
+    else:
+        user_type = ""
     try:
-        return 'verified' in response.json() and response.json()['verified']
+        access_token_json = jwt.decode(data['access_token'], public_key, algorithms='RS256',
+                                       audience=[user_type, 'account'])
+        return access_token_json['clientId'] == user_type
     except:
         return False
+
+
+def verify(username, token, usertype):
+    try:
+        data = jwt.decode(token, SECRET_JWT_KEY, algorithm='HS256')
+    except:
+        return False
+
+    data['time'] = datetime.strptime(data['time'][:-6], '%Y-%m-%d %H:%M:%S.%f')
+    current_time = datetime.strptime(str(localtime(now()))[:-6], '%Y-%m-%d %H:%M:%S.%f')
+
+    if username != data['username'] or (current_time - data['time']) > timedelta(seconds=data['duration_refresh']):
+        return False
+
+    if (current_time - data['time']) < timedelta(seconds=data['duration_access']) \
+            and verify_token(data, usertype):
+        return True
+    return False
 
 
 def refresh(username, token, usertype):
@@ -48,7 +70,7 @@ def is_banned(header):
     response = requests.get('http://' + admin_server_ip + '/' + header['Username'] + '/is-banned/',
                             headers=header)
     try:
-        if response.json()['is_banned'] == "true":
+        if response.json()['is_banned'] is True:
             return 1, response.json()['end_time']
         else:
             return 0, None
@@ -60,7 +82,7 @@ def is_timeout(header):
     response = requests.get('http://' + admin_server_ip + '/' + header['Username'] + '/is-timeout/',
                             headers=header)
     try:
-        if response.json()['is_timeout'] == "true":
+        if response.json()['is_timeout'] is True:
             return 1, response.json()['end_time']
         else:
             return 0, None
@@ -99,7 +121,7 @@ class Login(APIView):
                                        data=data)
 
         try:
-            if 'ans_token' not in token_response.json():
+            if 'token' not in token_response.json():
                 return render(request, template_name='login.html', context={'login_result': False})
         except:
             return render(request, template_name='login.html', context={'login_result': False})
@@ -107,9 +129,9 @@ class Login(APIView):
         if token_type == 'user':
             response = redirect('/profile/user/' + username)
         else:
-            response = redirect('/profile/admin/')
+            response = redirect('/profile/admin/users/')
 
-        response.set_cookie('Token', token_response.json()['ans_token'])
+        response.set_cookie('Token', token_response.json()['token'])
         response.set_cookie('Username', username)
         response.set_cookie('UserType', token_type)
 
@@ -173,7 +195,7 @@ class SignUpView(APIView):
                                            data=data)
 
             header = {
-                'Token': token_response.json()['ans_token'],
+                'Token': token_response.json()['token'],
                 'Username': username,
                 'UserType': token_type
             }
@@ -203,9 +225,9 @@ class UserProfileView(APIView):
         new_token = request.COOKIES['Token']
         if not verify(request.COOKIES['Username'], request.COOKIES['Token'], request.COOKIES['UserType']):
             new_token = refresh(request.COOKIES['Username'], request.COOKIES['Token'], request.COOKIES['UserType'])
-            if 'ans_token' not in new_token:
+            if 'token' not in new_token:
                 return redirect('/login/')
-            new_token = new_token['ans_token']
+            new_token = new_token['token']
 
         header = {
             'Username': request.COOKIES['Username'],
@@ -272,9 +294,9 @@ class UpdateProfileView(APIView):
         new_token = request.COOKIES['Token']
         if not verify(request.COOKIES['Username'], request.COOKIES['Token'], request.COOKIES['UserType']):
             new_token = refresh(request.COOKIES['Username'], request.COOKIES['Token'], request.COOKIES['UserType'])
-            if 'ans_token' not in new_token:
+            if 'token' not in new_token:
                 return redirect('/login/')
-            new_token = new_token['ans_token']
+            new_token = new_token['token']
 
         header = {
             'Username': request.COOKIES['Username'],
@@ -320,9 +342,9 @@ class UpdateProfileView(APIView):
         new_token = request.COOKIES['Token']
         if not verify(request.COOKIES['Username'], request.COOKIES['Token'], request.COOKIES['UserType']):
             new_token = refresh(request.COOKIES['Username'], request.COOKIES['Token'], request.COOKIES['UserType'])
-            if 'ans_token' not in new_token:
+            if 'token' not in new_token:
                 return redirect('/login/')
-            new_token = new_token['ans_token']
+            new_token = new_token['token']
 
         header = {
             'Username': request.COOKIES['Username'],
@@ -380,9 +402,9 @@ class AdminProfileView(APIView):
         new_token = request.COOKIES['Token']
         if not verify(request.COOKIES['Username'], request.COOKIES['Token'], request.COOKIES['UserType']):
             new_token = refresh(request.COOKIES['Username'], request.COOKIES['Token'], request.COOKIES['UserType'])
-            if 'ans_token' not in new_token:
+            if 'token' not in new_token:
                 return redirect('/login/')
-            new_token = new_token['ans_token']
+            new_token = new_token['token']
 
         header = {
             'Username': request.COOKIES['Username'],
@@ -408,6 +430,82 @@ class AdminProfileView(APIView):
             return render(request, template_name='error.html', context={'error': token_response.content})
 
 
+class NotApprovedAdminsView(APIView):
+    permission_classes = (AllowAny,)
+
+    def get(self, request):
+        if not ('Username' in request.COOKIES and 'Token' in request.COOKIES and 'UserType' in request.COOKIES) or\
+                request.COOKIES['UserType'] == 'user':
+            return redirect('/login/')
+
+        new_token = request.COOKIES['Token']
+        if not verify(request.COOKIES['Username'], request.COOKIES['Token'], request.COOKIES['UserType']):
+            new_token = refresh(request.COOKIES['Username'], request.COOKIES['Token'], request.COOKIES['UserType'])
+            if 'token' not in new_token:
+                return redirect('/login/')
+            new_token = new_token['token']
+
+        header = {
+            'Username': request.COOKIES['Username'],
+            'Token': new_token,
+            'UserType': request.COOKIES['UserType']
+        }
+
+        try:
+            token_response = requests.get('http://' + login_server_ip + '/not_approved/',
+                                          headers=header)
+            admins = token_response.json()['admins']
+
+            context = {
+                'you_are': header['Username'],
+                'admins': admins
+            }
+
+            response = render(request, template_name='profile_admin_non_approved.html', context=context)
+
+            response.set_cookie('Token', new_token)
+            return response
+        except:
+            return render(request, template_name='error.html', context={'error': token_response.content})
+
+
+class ApproveAdminView(APIView):
+    permission_classes = (AllowAny,)
+
+    def get(self, request, admin_name):
+        if not ('Username' in request.COOKIES and 'Token' in request.COOKIES and 'UserType' in request.COOKIES) or\
+                request.COOKIES['UserType'] == 'user':
+            return redirect('/login/')
+
+        new_token = request.COOKIES['Token']
+        if not verify(request.COOKIES['Username'], request.COOKIES['Token'], request.COOKIES['UserType']):
+            new_token = refresh(request.COOKIES['Username'], request.COOKIES['Token'], request.COOKIES['UserType'])
+            if 'token' not in new_token:
+                return redirect('/login/')
+            new_token = new_token['token']
+
+        header = {
+            'Username': request.COOKIES['Username'],
+            'Token': new_token,
+            'UserType': request.COOKIES['UserType']
+        }
+
+        try:
+            token_response = requests.get('http://' + login_server_ip + '/approve/' + admin_name + '/',
+                                          headers=header)
+            if 'approved' in token_response.json():
+                context = {'approved': True}
+            else:
+                context = {'approved': False}
+            context['admin'] = admin_name
+            response = render(request, template_name='is_approved.html', context=context)
+
+            response.set_cookie('Token', new_token)
+            return response
+        except:
+            return render(request, template_name='error.html', context={'error': token_response.content})
+
+
 class BanUserView(APIView):
     permission_classes = (AllowAny,)
 
@@ -419,9 +517,9 @@ class BanUserView(APIView):
         new_token = request.COOKIES['Token']
         if not verify(request.COOKIES['Username'], request.COOKIES['Token'], request.COOKIES['UserType']):
             new_token = refresh(request.COOKIES['Username'], request.COOKIES['Token'], request.COOKIES['UserType'])
-            if 'ans_token' not in new_token:
+            if 'token' not in new_token:
                 return redirect('/login/')
-            new_token = new_token['ans_token']
+            new_token = new_token['token']
 
         header = {
             'Username': request.COOKIES['Username'],
@@ -433,7 +531,7 @@ class BanUserView(APIView):
             token_response = requests.get('http://' + admin_server_ip + '/' + username + '/is-banned/',
                                           headers=header)
             banned = token_response.json()['is_banned']
-            if banned != "false":
+            if banned is True:
                 banned = token_response.json()['end_time']
             else:
                 banned = None
@@ -457,9 +555,9 @@ class BanUserView(APIView):
         new_token = request.COOKIES['Token']
         if not verify(request.COOKIES['Username'], request.COOKIES['Token'], request.COOKIES['UserType']):
             new_token = refresh(request.COOKIES['Username'], request.COOKIES['Token'], request.COOKIES['UserType'])
-            if 'ans_token' not in new_token:
+            if 'token' not in new_token:
                 return redirect('/login/')
-            new_token = new_token['ans_token']
+            new_token = new_token['token']
 
         header = {
             'Username': request.COOKIES['Username'],
@@ -493,9 +591,9 @@ class TimeoutUserView(APIView):
         new_token = request.COOKIES['Token']
         if not verify(request.COOKIES['Username'], request.COOKIES['Token'], request.COOKIES['UserType']):
             new_token = refresh(request.COOKIES['Username'], request.COOKIES['Token'], request.COOKIES['UserType'])
-            if 'ans_token' not in new_token:
+            if 'token' not in new_token:
                 return redirect('/login/')
-            new_token = new_token['ans_token']
+            new_token = new_token['token']
 
         header = {
             'Username': request.COOKIES['Username'],
@@ -507,7 +605,7 @@ class TimeoutUserView(APIView):
             token_response = requests.get('http://' + admin_server_ip + '/' + username + '/is-timeout/',
                                           headers=header)
             timeout = token_response.json()['is_timeout']
-            if timeout != "false":
+            if timeout is True:
                 timeout = token_response.json()['end_time']
             else:
                 timeout = None
@@ -531,9 +629,9 @@ class TimeoutUserView(APIView):
         new_token = request.COOKIES['Token']
         if not verify(request.COOKIES['Username'], request.COOKIES['Token'], request.COOKIES['UserType']):
             new_token = refresh(request.COOKIES['Username'], request.COOKIES['Token'], request.COOKIES['UserType'])
-            if 'ans_token' not in new_token:
+            if 'token' not in new_token:
                 return redirect('/login/')
-            new_token = new_token['ans_token']
+            new_token = new_token['token']
 
         header = {
             'Username': request.COOKIES['Username'],
@@ -567,9 +665,9 @@ class ChatView(APIView):
         new_token = request.COOKIES['Token']
         if not verify(request.COOKIES['Username'], request.COOKIES['Token'], request.COOKIES['UserType']):
             new_token = refresh(request.COOKIES['Username'], request.COOKIES['Token'], request.COOKIES['UserType'])
-            if 'ans_token' not in new_token:
+            if 'token' not in new_token:
                 return redirect('/login/')
-            new_token = new_token['ans_token']
+            new_token = new_token['token']
 
         header = {
             'Username': request.COOKIES['Username'],
@@ -636,9 +734,9 @@ class ChatView(APIView):
         new_token = request.COOKIES['Token']
         if not verify(request.COOKIES['Username'], request.COOKIES['Token'], request.COOKIES['UserType']):
             new_token = refresh(request.COOKIES['Username'], request.COOKIES['Token'], request.COOKIES['UserType'])
-            if 'ans_token' not in new_token:
+            if 'token' not in new_token:
                 return redirect('/login/')
-            new_token = new_token['ans_token']
+            new_token = new_token['token']
 
         header = {
             'Username': request.COOKIES['Username'],
@@ -702,9 +800,9 @@ class UserListView(APIView):
         new_token = request.COOKIES['Token']
         if not verify(request.COOKIES['Username'], request.COOKIES['Token'], request.COOKIES['UserType']):
             new_token = refresh(request.COOKIES['Username'], request.COOKIES['Token'], request.COOKIES['UserType'])
-            if 'ans_token' not in new_token:
+            if 'token' not in new_token:
                 return redirect('/login/')
-            new_token = new_token['ans_token']
+            new_token = new_token['token']
 
         header = {
             'Username': request.COOKIES['Username'],

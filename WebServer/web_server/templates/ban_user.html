@@ -22,7 +22,7 @@
 
 {% block content %}
 {% if not username is None %}
-    <h3>{{username}}</h3>
+    <h3><i>{{username}}</i></h3>
 {% endif %}
 {% if not banned is None %}
     <h3>{{banned}}</h3>
@@ -34,7 +34,7 @@
     </form>
 {% endif %}
 
-<a href="/profile/admin/">Return to main</a><br />
+<a href="/profile/admin/users/">Return to users list</a><br />
 <a href="/logout/">Logout</a>
 {% endblock %}
 </body>

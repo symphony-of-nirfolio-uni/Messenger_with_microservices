@@ -8,6 +8,10 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
 from server_app.models import UserInfo, ChatList, Message
 from django.utils.timezone import localtime, now
+from credentials import SECRET_JWT_KEY, PUBLIC_KEY_KEYCLOAK
+import jwt
+from django.utils.timezone import localtime, now
+from datetime import timedelta, datetime
 
 wrong_input = {
     'my_error': 'invalid input'
@@ -34,19 +38,35 @@ def all_user_dict(users):
     return {'usernames': usernames}
 
 
-def verify(token, username, usertype):
-    data = {
-        'username': username,
-        'token': token,
-        'user_type': usertype
-    }
-
-    response = requests.post('http://' + login_server_ip + '/verify_token/',
-                             data=data)
+def verify_token(data, user_type):
+    public_key = PUBLIC_KEY_KEYCLOAK
+    if user_type == 'user':
+        user_type = "ServerClient"
+    elif user_type == 'admin':
+        user_type = "AdminClient"
+    else:
+        user_type = ""
     try:
-        return 'verified' in response.json() and response.json()['verified']
+        access_token_json = jwt.decode(data['access_token'], public_key, algorithms='RS256',
+                                       audience=[user_type, 'account'])
+        return access_token_json['clientId'] == user_type
     except:
         return False
+
+
+def verify(token, username, usertype):
+    data = jwt.decode(token, SECRET_JWT_KEY, algorithm='HS256')
+
+    data['time'] = datetime.strptime(data['time'][:-6], '%Y-%m-%d %H:%M:%S.%f')
+    current_time = datetime.strptime(str(localtime(now()))[:-6], '%Y-%m-%d %H:%M:%S.%f')
+
+    if username != data['username'] or (current_time - data['time']) > timedelta(seconds=data['duration_refresh']):
+        return False
+
+    if (current_time - data['time']) < timedelta(seconds=data['duration_access']) \
+            and verify_token(data, usertype):
+        return True
+    return False
 
 
 class UserInfoView(APIView):
