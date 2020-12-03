@@ -70,7 +70,7 @@ def is_banned(header):
     response = requests.get('http://' + admin_server_ip + '/' + header['Username'] + '/is-banned/',
                             headers=header)
     try:
-        if response.json()['is_banned'] == "true":
+        if response.json()['is_banned'] is True:
             return 1, response.json()['end_time']
         else:
             return 0, None
@@ -82,7 +82,7 @@ def is_timeout(header):
     response = requests.get('http://' + admin_server_ip + '/' + header['Username'] + '/is-timeout/',
                             headers=header)
     try:
-        if response.json()['is_timeout'] == "true":
+        if response.json()['is_timeout'] is True:
             return 1, response.json()['end_time']
         else:
             return 0, None
@@ -129,7 +129,7 @@ class Login(APIView):
         if token_type == 'user':
             response = redirect('/profile/user/' + username)
         else:
-            response = redirect('/profile/admin/')
+            response = redirect('/profile/admin/users/')
 
         response.set_cookie('Token', token_response.json()['token'])
         response.set_cookie('Username', username)
@@ -423,6 +423,82 @@ class AdminProfileView(APIView):
             }
 
             response = render(request, template_name='profile_admin.html', context=context)
+
+            response.set_cookie('Token', new_token)
+            return response
+        except:
+            return render(request, template_name='error.html', context={'error': token_response.content})
+
+
+class NotApprovedAdminsView(APIView):
+    permission_classes = (AllowAny,)
+
+    def get(self, request):
+        if not ('Username' in request.COOKIES and 'Token' in request.COOKIES and 'UserType' in request.COOKIES) or\
+                request.COOKIES['UserType'] == 'user':
+            return redirect('/login/')
+
+        new_token = request.COOKIES['Token']
+        if not verify(request.COOKIES['Username'], request.COOKIES['Token'], request.COOKIES['UserType']):
+            new_token = refresh(request.COOKIES['Username'], request.COOKIES['Token'], request.COOKIES['UserType'])
+            if 'token' not in new_token:
+                return redirect('/login/')
+            new_token = new_token['token']
+
+        header = {
+            'Username': request.COOKIES['Username'],
+            'Token': new_token,
+            'UserType': request.COOKIES['UserType']
+        }
+
+        try:
+            token_response = requests.get('http://' + login_server_ip + '/not_approved/',
+                                          headers=header)
+            admins = token_response.json()['admins']
+
+            context = {
+                'you_are': header['Username'],
+                'admins': admins
+            }
+
+            response = render(request, template_name='profile_admin_non_approved.html', context=context)
+
+            response.set_cookie('Token', new_token)
+            return response
+        except:
+            return render(request, template_name='error.html', context={'error': token_response.content})
+
+
+class ApproveAdminView(APIView):
+    permission_classes = (AllowAny,)
+
+    def get(self, request, admin_name):
+        if not ('Username' in request.COOKIES and 'Token' in request.COOKIES and 'UserType' in request.COOKIES) or\
+                request.COOKIES['UserType'] == 'user':
+            return redirect('/login/')
+
+        new_token = request.COOKIES['Token']
+        if not verify(request.COOKIES['Username'], request.COOKIES['Token'], request.COOKIES['UserType']):
+            new_token = refresh(request.COOKIES['Username'], request.COOKIES['Token'], request.COOKIES['UserType'])
+            if 'token' not in new_token:
+                return redirect('/login/')
+            new_token = new_token['token']
+
+        header = {
+            'Username': request.COOKIES['Username'],
+            'Token': new_token,
+            'UserType': request.COOKIES['UserType']
+        }
+
+        try:
+            token_response = requests.get('http://' + login_server_ip + '/approve/' + admin_name + '/',
+                                          headers=header)
+            if 'approved' in token_response.json():
+                context = {'approved': True}
+            else:
+                context = {'approved': False}
+            context['admin'] = admin_name
+            response = render(request, template_name='is_approved.html', context=context)
 
             response.set_cookie('Token', new_token)
             return response
